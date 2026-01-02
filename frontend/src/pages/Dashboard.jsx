@@ -33,9 +33,26 @@ const fmtDate = (d) => {
   ).padStart(2, "0")}-${dt.getFullYear()}`;
 };
 
+// ✅ helper ONLY for on-track logic
+const daysFromToday = (d) => {
+  if (!d) return null;
+  return Math.ceil(
+    (new Date(d).setHours(0,0,0,0) - new Date(today).setHours(0,0,0,0)) /
+    (1000 * 60 * 60 * 24)
+  );
+};
+
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [activeSignal, setActiveSignal] = useState(null);
+
+  // ✅ filters ONLY for clicked table
+  const [tableFilters, setTableFilters] = useState({
+    workstream: "",
+    deliverable: "",
+    owner: "",
+    status: "",
+  });
 
   useEffect(() => {
     fetchTasks();
@@ -108,6 +125,7 @@ function Dashboard() {
         return p < 30 && t.status !== "Closed";
       }),
     },
+    // ✅ UPDATED EXACTLY AS REQUESTED
     ontrack: {
       label: "On Track / Proceed",
       data: tasks.filter(t => {
@@ -115,10 +133,33 @@ function Dashboard() {
           typeof t.progress === "string"
             ? Number(t.progress.replace("%", ""))
             : t.progress || 0;
-        return p >= 70 && t.status === "WIP";
+
+        const leadDays = daysFromToday(t.endDate);
+
+        return (
+          t.status === "WIP" &&
+          p > 60 &&
+          leadDays !== null &&
+          leadDays >= 7 &&
+          leadDays <= 10
+        );
       }),
     },
   }), [tasks]);
+
+  // ✅ apply filters ONLY to clicked table
+  const filteredSignalData = useMemo(() => {
+    if (!activeSignal) return [];
+    return signals[activeSignal].data.filter(r => (
+      (!tableFilters.workstream ||
+        r.workstream?.toLowerCase().includes(tableFilters.workstream.toLowerCase())) &&
+      (!tableFilters.deliverable ||
+        r.deliverable?.toLowerCase().includes(tableFilters.deliverable.toLowerCase())) &&
+      (!tableFilters.owner ||
+        r.owner?.toLowerCase().includes(tableFilters.owner.toLowerCase())) &&
+      (!tableFilters.status || r.status === tableFilters.status)
+    ));
+  }, [activeSignal, tableFilters, signals]);
 
   const exportExcel = (rows, name) => {
     const ws = XLSX.utils.json_to_sheet(
@@ -205,7 +246,15 @@ function Dashboard() {
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
                 }`}
-              onClick={() => setActiveSignal(active ? null : key)}
+              onClick={() => {
+                setActiveSignal(active ? null : key);
+                setTableFilters({
+                  workstream: "",
+                  deliverable: "",
+                  owner: "",
+                  status: "",
+                });
+              }}
             >
               {cfg.label} ({cfg.data.length})
             </button>
@@ -225,7 +274,7 @@ function Dashboard() {
                 className="btn-outline btn-xs"
                 onClick={() =>
                   exportExcel(
-                    signals[activeSignal].data,
+                    filteredSignalData,
                     signals[activeSignal].label.replace(/ /g, "_")
                   )
                 }
@@ -241,7 +290,29 @@ function Dashboard() {
             </div>
           </div>
 
-          <SignalTable data={signals[activeSignal].data} />
+          {/* ✅ FILTERS FOR CLICKED TABLE ONLY */}
+          <div className="flex gap-2 mb-3">
+            <input className="border px-2 py-1 text-xs" placeholder="Workstream"
+              value={tableFilters.workstream}
+              onChange={e => setTableFilters({ ...tableFilters, workstream: e.target.value })} />
+            <input className="border px-2 py-1 text-xs" placeholder="Deliverable"
+              value={tableFilters.deliverable}
+              onChange={e => setTableFilters({ ...tableFilters, deliverable: e.target.value })} />
+            <input className="border px-2 py-1 text-xs" placeholder="Owner"
+              value={tableFilters.owner}
+              onChange={e => setTableFilters({ ...tableFilters, owner: e.target.value })} />
+            <select className="border px-2 py-1 text-xs"
+              value={tableFilters.status}
+              onChange={e => setTableFilters({ ...tableFilters, status: e.target.value })}>
+              <option value="">All Status</option>
+              <option>WIP</option>
+              <option>Delayed</option>
+              <option>Blocked</option>
+              <option>Closed</option>
+            </select>
+          </div>
+
+          <SignalTable data={filteredSignalData} />
         </div>
       )}
     </div>
@@ -270,18 +341,13 @@ function SignalTable({ data }) {
           <tr key={r.id} className="border-t hover:bg-gray-50">
             <td className="px-2 py-1.5">{r.workstream}</td>
             <td className="px-2 py-1.5">{r.deliverable}</td>
-
-            {/* ✅ STATUS COLOR RESTORED */}
-            <td
-              className={`px-2 py-1.5 font-medium ${
-                r.status === "Delayed" || r.status === "Blocked"
-                  ? "text-red-600"
-                  : "text-gray-800"
-              }`}
-            >
+            <td className={`px-2 py-1.5 font-medium ${
+              r.status === "Delayed" || r.status === "Blocked"
+                ? "text-red-600"
+                : "text-gray-800"
+            }`}>
               {r.status}
             </td>
-
             <td className="px-2 py-1.5">{pct(r.progress)}</td>
             <td className="px-2 py-1.5">{fmtDate(r.startDate)}</td>
             <td className="px-2 py-1.5">{fmtDate(r.endDate)}</td>
