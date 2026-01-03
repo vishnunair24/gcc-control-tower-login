@@ -28,9 +28,10 @@ function parseDate(value, fallback) {
   return fallback;
 }
 
+/* =========================================================
+   EXISTING PROGRAM TRACKER EXCEL REPLACE (UNCHANGED)
+   ========================================================= */
 exports.replaceFromExcel = async (req, res) => {
-  console.log("🔥 EXCEL REPLACE CONTROLLER ACTIVE (HEADER SAFE)");
-
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
@@ -39,7 +40,6 @@ exports.replaceFromExcel = async (req, res) => {
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    // Read raw rows (no header guessing)
     const rows = XLSX.utils.sheet_to_json(sheet, {
       header: 1,
       defval: "",
@@ -49,9 +49,7 @@ exports.replaceFromExcel = async (req, res) => {
       return res.status(400).json({ error: "Excel has no data rows" });
     }
 
-    // Normalize headers
     const headerRow = rows[0].map(normalizeHeader);
-
     const colIndex = (name) =>
       headerRow.findIndex((h) => h.includes(name));
 
@@ -68,57 +66,101 @@ exports.replaceFromExcel = async (req, res) => {
       owner: colIndex("owner"),
     };
 
-    const tasks = [];
-    const warnings = [];
     const today = new Date();
+    const tasks = [];
 
-    rows.slice(1).forEach((row, i) => {
-      // Skip fully empty rows
+    rows.slice(1).forEach((row) => {
       if (row.every((c) => String(c).trim() === "")) return;
 
-      const startDate = parseDate(
-        row[idx.startDate],
-        today
-      );
-
-      const endDate = parseDate(
-        row[idx.endDate],
-        startDate
-      );
+      const startDate = parseDate(row[idx.startDate], today);
+      const endDate = parseDate(row[idx.endDate], startDate);
 
       tasks.push({
-        workstream:
-          row[idx.workstream]?.toString().trim() || "General",
-        deliverable:
-          row[idx.deliverable]?.toString().trim() || "TBD",
-        status:
-          row[idx.status]?.toString().trim() || "WIP",
-        duration:
-          Number(row[idx.duration]) || 0,
+        workstream: row[idx.workstream] || "General",
+        deliverable: row[idx.deliverable] || "TBD",
+        status: row[idx.status] || "WIP",
+        duration: Number(row[idx.duration]) || 0,
         startDate,
         endDate,
-        progress:
-          Number(row[idx.progress]) || 0,
-        phase:
-          row[idx.phase]?.toString().trim() || "Unknown",
-        milestone:
-          row[idx.milestone]?.toString().trim() || "",
-        owner:
-          row[idx.owner]?.toString().trim() || "",
+        progress: Number(row[idx.progress]) || 0,
+        phase: row[idx.phase] || "",
+        milestone: row[idx.milestone] || "",
+        owner: row[idx.owner] || "",
       });
     });
 
-    if (!tasks.length) {
-      return res.status(400).json({
-        error:
-          "No valid data rows found. Check Excel headers and data.",
-      });
-    }
-
     const result = await prisma.$transaction(async (tx) => {
       const deleted = await tx.task.deleteMany();
-      const inserted = await tx.task.createMany({
-        data: tasks,
+      const inserted = await tx.task.createMany({ data: tasks });
+
+      return {
+        deleted: deleted.count,
+        inserted: inserted.count,
+      };
+    });
+
+    res.json({ message: "Program tracker replaced", ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* =========================================================
+   NEW: INFRA SETUP TRACKER EXCEL REPLACE
+   ========================================================= */
+exports.replaceInfraFromExcel = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: "",
+    });
+
+    if (rows.length < 2) {
+      return res.status(400).json({ error: "Excel has no data rows" });
+    }
+
+    const headerRow = rows[0].map(normalizeHeader);
+    const colIndex = (name) =>
+      headerRow.findIndex((h) => h.includes(name));
+
+    const idx = {
+      infraPhase: colIndex("infra"),
+      taskName: colIndex("task"),
+      status: colIndex("status"),
+      percent: colIndex("complete"),
+      startDate: colIndex("start"),
+      endDate: colIndex("end"),
+      owner: colIndex("owner"),
+    };
+
+    const today = new Date();
+    const infraTasks = [];
+
+    rows.slice(1).forEach((row) => {
+      if (row.every((c) => String(c).trim() === "")) return;
+
+      infraTasks.push({
+        infraPhase: row[idx.infraPhase] || "General",
+        taskName: row[idx.taskName] || "TBD",
+        status: row[idx.status] || "Planned",
+        percentComplete: Number(row[idx.percent]) || 0,
+        startDate: parseDate(row[idx.startDate], today),
+        endDate: parseDate(row[idx.endDate], today),
+        owner: row[idx.owner] || "",
+      });
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.infraTask.deleteMany();
+      const inserted = await tx.infraTask.createMany({
+        data: infraTasks,
       });
 
       return {
@@ -128,12 +170,11 @@ exports.replaceFromExcel = async (req, res) => {
     });
 
     res.json({
-      message: "Excel replaced successfully",
+      message: "Infra setup tracker replaced",
       ...result,
-      rowsRead: rows.length - 1,
     });
   } catch (err) {
-    console.error("❌ EXCEL REPLACE ERROR:", err);
+    console.error("Infra Excel replace failed:", err);
     res.status(500).json({ error: err.message });
   }
 };

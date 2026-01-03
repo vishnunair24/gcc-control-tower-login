@@ -5,6 +5,9 @@ import Dashboard from "./pages/Dashboard";
 import Tracker from "./pages/Tracker";
 import ProgramIntelligence from "./pages/ProgramIntelligence";
 
+// NEW: Infra Tracker
+import InfraTracker from "./pages/InfraTracker";
+
 function App() {
   return (
     <div>
@@ -20,6 +23,10 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tracker" element={<Tracker />} />
+
+            {/* NEW ROUTE */}
+            <Route path="/infra-tracker" element={<InfraTracker />} />
+
             <Route
               path="/program-intelligence"
               element={<ProgramIntelligence />}

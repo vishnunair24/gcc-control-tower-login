@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import ExcelReplaceUpload from "../components/ExcelReplaceUpload";
 import * as XLSX from "xlsx";
@@ -17,6 +18,8 @@ const formatDate = (date) =>
     : "";
 
 export default function Tracker() {
+  const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [page, setPage] = useState(1);
@@ -38,7 +41,7 @@ export default function Tracker() {
   // =========================
   const loadTasks = async () => {
     const res = await axios.get("http://localhost:4000/tasks");
-    setTasks(res.data);
+    setTasks(res.data || []);
   };
 
   useEffect(() => {
@@ -113,7 +116,7 @@ export default function Tracker() {
   };
 
   // =========================
-  // EXPORT TO EXCEL (NEW)
+  // EXPORT TO EXCEL
   // =========================
   const exportToExcel = () => {
     const exportData = tasks.map((t) => ({
@@ -156,23 +159,42 @@ export default function Tracker() {
         </p>
       </div>
 
-      {/* Excel Actions */}
-      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-        <ExcelReplaceUpload
-          onSuccess={() => {
-            loadTasks();
-            setExcelMessage(
-              "Excel uploaded. Tracker data replaced successfully."
-            );
-            setTimeout(() => setExcelMessage(""), 4000);
-          }}
-        />
+      {/* ACTION BAR */}
+      <div
+        style={{
+          display: "flex",
+          gap: "12px",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <ExcelReplaceUpload
+            endpoint="http://localhost:4000/excel/replace"
+            confirmText="This will completely replace ALL Program Tracker data. Continue?"
+            onSuccess={() => {
+              loadTasks();
+              setExcelMessage(
+                "Excel uploaded. Tracker data replaced successfully."
+              );
+              setTimeout(() => setExcelMessage(""), 4000);
+            }}
+          />
 
+          <button
+            className="btn-outline btn-xs"
+            onClick={exportToExcel}
+          >
+            Download Excel
+          </button>
+        </div>
+
+        {/* 🔹 SMALL INFRA BUTTON ON RIGHT */}
         <button
-          className="btn-outline btn-xs"
-          onClick={exportToExcel}
+          className="btn-primary btn-xs"
+          onClick={() => navigate("/infra-tracker")}
         >
-          Download Excel
+          Click to view Infra Setup Tracker
         </button>
       </div>
 
@@ -254,20 +276,6 @@ export default function Tracker() {
       {/* Table */}
       <div className="table-container">
         <table className="tracker-table">
-          <colgroup>
-            <col style={{ width: "40px" }} />
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "210px" }} />
-            <col style={{ width: "70px" }} />
-            <col style={{ width: "70px" }} />
-            <col style={{ width: "60px" }} />
-            <col style={{ width: "110px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "100px" }} />
-          </colgroup>
-
           <thead>
             <tr>
               <th>#</th>
