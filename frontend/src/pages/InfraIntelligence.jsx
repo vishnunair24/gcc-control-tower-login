@@ -41,7 +41,7 @@ export default function InfraIntelligence() {
   // =========================
   useEffect(() => {
     axios
-      .get("http://localhost:4000/infra-tasks")
+      .get(`${API_BASE_URL}/infra-tasks`)
       .then((res) => setTasks(res.data || []));
   }, []);
 
