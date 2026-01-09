@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
