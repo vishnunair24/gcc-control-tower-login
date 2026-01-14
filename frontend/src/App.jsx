@@ -7,6 +7,7 @@ import ProgramIntelligence from "./pages/ProgramIntelligence";
 import InfraTracker from "./pages/InfraTracker";
 import InfraIntelligence from "./pages/InfraIntelligence";
 import AdminApprovals from "./pages/AdminApprovals";
+import EmployeeLanding from "./pages/EmployeeLanding";
 
 import summitLogo from "./assets/summit-logo.png";
 
@@ -59,6 +60,7 @@ function App() {
         >
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/employee-home" element={<EmployeeLanding />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tracker" element={<Tracker />} />
             <Route path="/infra-tracker" element={<InfraTracker />} />

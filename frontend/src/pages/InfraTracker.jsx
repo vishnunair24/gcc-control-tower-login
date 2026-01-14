@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import ExcelReplaceUpload from "../components/ExcelReplaceUpload";
 import * as XLSX from "xlsx";
@@ -29,6 +29,9 @@ const createEmptyNewRow = () => ({
 export default function InfraTracker() {
   const navigate = useNavigate();
 
+  const [searchParams] = useSearchParams();
+  const customerName = searchParams.get("customerName") || "";
+
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [page, setPage] = useState(1);
@@ -49,17 +52,35 @@ export default function InfraTracker() {
   ========================= */
   const [newRows, setNewRows] = useState([]);
 
+  // Customers should not access the Infra tracker directly
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/auth/me", {
+          withCredentials: true,
+        });
+        if (res.data?.role === "customer") {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch {
+        window.location.href = "/login.html";
+      }
+    })();
+  }, [navigate]);
+
   // =========================
   // Load Infra Tasks
   // =========================
   const loadTasks = async () => {
-    const res = await axios.get("http://localhost:3001/infra-tasks");
+    const res = await axios.get("http://localhost:3001/infra-tasks", {
+      params: customerName ? { customerName } : {},
+    });
     setTasks(res.data || []);
   };
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [customerName]);
 
   // =========================
   // Unique owners
@@ -151,6 +172,9 @@ export default function InfraTracker() {
   const saveNewRow = async (row) => {
     const payload = normalizePayload(row);
     delete payload._tempId;
+    if (customerName) {
+      payload.customerName = customerName;
+    }
 
     await axios.post("http://localhost:3001/infra-tasks", payload);
 
@@ -162,6 +186,9 @@ export default function InfraTracker() {
     for (const row of newRows) {
       const payload = normalizePayload(row);
       delete payload._tempId;
+      if (customerName) {
+        payload.customerName = customerName;
+      }
       await axios.post("http://localhost:3001/infra-tasks", payload);
     }
     setNewRows([]);
@@ -221,7 +248,13 @@ export default function InfraTracker() {
         {/* LEFT SIDE */}
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <ExcelReplaceUpload
-            endpoint={"http://localhost:3001/excel/infra-replace"}
+            endpoint={
+              customerName
+                ? `http://localhost:3001/excel/infra-replace?customerName=${encodeURIComponent(
+                    customerName
+                  )}`
+                : "http://localhost:3001/excel/infra-replace"
+            }
             confirmText="This will completely replace ALL Infra Setup data. Continue?"
             onSuccess={() => {
               loadTasks();

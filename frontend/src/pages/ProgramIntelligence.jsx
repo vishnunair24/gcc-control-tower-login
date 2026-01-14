@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -20,7 +20,25 @@ const fmtMonth = (d) =>
 
 export default function ProgramIntelligence() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const customerName = searchParams.get("customerName") || "";
   const [tasks, setTasks] = useState([]);
+
+  // Customers should only see Dashboard, not intelligence views
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/auth/me", {
+          withCredentials: true,
+        });
+        if (res.data?.role === "customer") {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch {
+        window.location.href = "/login.html";
+      }
+    })();
+  }, [navigate]);
 
   // ================= TIMELINE CONTROLS =================
   const [useCustomStart, setUseCustomStart] = useState(false);
@@ -41,10 +59,14 @@ export default function ProgramIntelligence() {
 
   // ================= LOAD DATA =================
   useEffect(() => {
-    axios.get("http://localhost:3001/tasks").then((res) => {
-      setTasks(res.data || []);
-    });
-  }, []);
+    axios
+      .get("http://localhost:3001/tasks", {
+        params: customerName ? { customerName } : {},
+      })
+      .then((res) => {
+        setTasks(res.data || []);
+      });
+  }, [customerName]);
 
   // ================= DATA PREP =================
   const validTasks = useMemo(

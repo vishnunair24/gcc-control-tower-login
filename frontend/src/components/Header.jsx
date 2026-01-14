@@ -68,6 +68,17 @@ export default function Header() {
           <div className="text-gray-500">&nbsp;</div>
         )}
 
+        {/* Go back to Home (customer selection) for employees/admins */}
+        {user && (user.role === "employee" || user.role === "admin") && (
+          <button
+            type="button"
+            onClick={() => navigate("/employee-home")}
+            className="px-3 py-1 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+          >
+            Go back to Home
+          </button>
+        )}
+
         {/* LOGO (further right) */}
         <div className="flex items-center pr-2 border-l border-gray-200 pl-4">
           <img src={customerLogo} alt="Customer Logo" style={{ height: "28px", objectFit: "contain", opacity: 0.95 }} />

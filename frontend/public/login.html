@@ -180,7 +180,13 @@
           });
         const data = await res.json().catch(()=>({}));
         if (res.ok) {
-          window.location.href = '/';
+          // After successful login, route employees and admins to the
+          // customer selection home; customers go straight into the app.
+          if (loginAs === 'customer') {
+            window.location.href = '/';
+          } else {
+            window.location.href = '/employee-home';
+          }
           return;
         }
         if (res.status === 403 && data && data.mustSetPassword) {

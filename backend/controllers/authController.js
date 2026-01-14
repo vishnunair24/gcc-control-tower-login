@@ -398,3 +398,17 @@ exports.setPassword = async (req, res) => {
     res.status(500).json({ error: "Failed to set password" });
   }
 };
+
+// List customers for employee landing (minimal fields)
+exports.listCustomers = async (req, res) => {
+  try {
+    const customers = await prisma.customer.findMany({
+      select: { id: true, customerName: true, name: true },
+      orderBy: { customerName: "asc" },
+    });
+    res.json(customers);
+  } catch (err) {
+    console.error("List customers failed:", err);
+    res.status(500).json({ error: "Failed to list customers" });
+  }
+};

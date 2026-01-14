@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -14,7 +14,25 @@ const fmt = (d) =>
 
 export default function InfraIntelligence() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const customerName = searchParams.get("customerName") || "";
   const [tasks, setTasks] = useState([]);
+
+  // Customers should not see Infra intelligence; redirect them
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/auth/me", {
+          withCredentials: true,
+        });
+        if (res.data?.role === "customer") {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch {
+        window.location.href = "/login.html";
+      }
+    })();
+  }, [navigate]);
 
   // =========================
   // Timeline controls
@@ -42,9 +60,11 @@ export default function InfraIntelligence() {
   // =========================
   useEffect(() => {
     axios
-      .get("http://localhost:3001/infra-tasks")
+      .get("http://localhost:3001/infra-tasks", {
+        params: customerName ? { customerName } : {},
+      })
       .then((res) => setTasks(res.data || []));
-  }, []);
+  }, [customerName]);
 
   const validTasks = useMemo(
     () =>

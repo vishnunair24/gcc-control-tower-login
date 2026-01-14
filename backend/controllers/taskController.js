@@ -3,11 +3,15 @@ const prisma = new PrismaClient();
 const { createAudit } = require("../utils/audit");
 
 /**
- * GET all tasks
+ * GET all tasks (optionally filtered by customerName)
  */
 exports.getTasks = async (req, res) => {
   try {
+    const { customerName } = req.query;
+    const where = customerName ? { customerName } : {};
+
     const tasks = await prisma.task.findMany({
+      where,
       orderBy: { id: "asc" },
     });
     res.json(tasks);
@@ -34,6 +38,8 @@ exports.updateTask = async (req, res) => {
         phase: data.phase,
         milestone: data.milestone,
         owner: data.owner,
+        // allow customerName to be updated if provided
+        customerName: data.customerName ?? undefined,
 
         // 🔥 CRITICAL FIX
         startDate: data.startDate

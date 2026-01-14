@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import {
@@ -44,6 +45,9 @@ const daysFromToday = (d) => {
 };
 
 function Dashboard() {
+  const [searchParams] = useSearchParams();
+  const customerName = searchParams.get("customerName") || "";
+
   const [tasks, setTasks] = useState([]);
   const [activeSignal, setActiveSignal] = useState(null);
 
@@ -57,10 +61,12 @@ function Dashboard() {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [customerName]);
 
   const fetchTasks = async () => {
-    const res = await axios.get("http://localhost:3001/tasks");
+    const res = await axios.get("http://localhost:3001/tasks", {
+      params: customerName ? { customerName } : {},
+    });
     setTasks(res.data);
   };
 

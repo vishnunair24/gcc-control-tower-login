@@ -33,6 +33,7 @@ router.post("/", async (req, res) => {
       startDate,
       endDate,
       owner,
+      customerName,
     } = req.body;
 
     // ✅ SAFELY DERIVE DURATION
@@ -56,6 +57,7 @@ router.post("/", async (req, res) => {
         endDate: endDate ? new Date(endDate) : null,
         duration, // ✅ FIXED
         owner,
+        customerName: customerName || null,
       },
     });
 

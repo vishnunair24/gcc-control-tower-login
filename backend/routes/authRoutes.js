@@ -8,6 +8,9 @@ router.post("/login", auth.login);
 router.post("/logout", auth.logout);
 router.get("/me", loadSession, auth.me);
 
+// Customers list (for employee landing)
+router.get("/customers", loadSession, auth.listCustomers);
+
 // Public: check signup status by email
 router.get("/signup-status", auth.signupStatus);
 

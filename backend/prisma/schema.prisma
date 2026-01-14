@@ -28,6 +28,9 @@ model Task {
   phase       String
   milestone   String
   owner       String
+  // Optional customer label so Program Tracker data can be scoped
+  // to a specific customer (e.g., Infinite, VIP, Routeware).
+  customerName String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -47,6 +50,10 @@ model InfraTask {
   endDate   DateTime
 
   owner String
+
+  // Optional customer label so Infra Tracker data can be scoped
+  // to a specific customer (e.g., Infinite, VIP, Routeware).
+  customerName String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
