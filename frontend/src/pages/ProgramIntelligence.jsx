@@ -22,23 +22,33 @@ export default function ProgramIntelligence() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerName = searchParams.get("customerName") || "";
+  const search = searchParams.toString();
   const [tasks, setTasks] = useState([]);
 
-  // Customers should only see Dashboard, not intelligence views
+  // Enforce role-based access and customer scoping
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", {
+        const res = await axios.get("http://localhost:4000/auth/me", {
           withCredentials: true,
         });
-        if (res.data?.role === "customer") {
+        const role = res.data?.role;
+
+        // Customers should only see Dashboard, not intelligence views
+        if (role === "customer") {
           navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Employees/Admins must always have a selected customer
+        if ((role === "employee" || role === "admin") && !customerName) {
+          navigate("/employee-home", { replace: true });
         }
       } catch {
         window.location.href = "/login.html";
       }
     })();
-  }, [navigate]);
+  }, [navigate, customerName]);
 
   // ================= TIMELINE CONTROLS =================
   const [useCustomStart, setUseCustomStart] = useState(false);
@@ -60,7 +70,7 @@ export default function ProgramIntelligence() {
   // ================= LOAD DATA =================
   useEffect(() => {
     axios
-      .get("http://localhost:3001/tasks", {
+      .get("http://localhost:4000/tasks", {
         params: customerName ? { customerName } : {},
       })
       .then((res) => {
@@ -236,7 +246,12 @@ export default function ProgramIntelligence() {
 
         <button
           className="btn-primary btn-xs"
-          onClick={() => navigate("/infra-intelligence")}
+          onClick={() =>
+            navigate({
+              pathname: "/infra-intelligence",
+              search: search ? `?${search}` : "",
+            })
+          }
         >
           Click to view Infra Setup Timeline
         </button>

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
+const { normalizeCustomerName } = require("../utils/customerName");
 
 const prisma = new PrismaClient();
 
@@ -9,7 +10,27 @@ const prisma = new PrismaClient();
 ===================================================== */
 router.get("/", async (req, res) => {
   try {
-    const { customerName } = req.query;
+    let { customerName } = req.query;
+
+    // For customer logins, always scope Infra tasks to their own customerName
+    if (req.user && req.user.role === "customer") {
+      try {
+        const cust = await prisma.customer.findUnique({
+          where: { userId: req.user.id },
+        });
+        if (cust && cust.customerName) {
+          customerName = normalizeCustomerName(cust.customerName);
+        }
+      } catch (e) {
+        console.error("Failed to resolve customer for infra tasks", e);
+      }
+    }
+
+    // Normalize any query-provided customerName as well
+    if (customerName) {
+      customerName = normalizeCustomerName(customerName);
+    }
+
     const where = customerName ? { customerName } : {};
 
     const tasks = await prisma.infraTask.findMany({

@@ -17,7 +17,7 @@ function Layout() {
     let mounted = true;
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", { withCredentials: true });
+        const res = await axios.get("http://localhost:4000/auth/me", { withCredentials: true });
         if (mounted) setUser(res.data);
       } catch (e) {
         if (mounted) setUser(null);
@@ -28,7 +28,7 @@ function Layout() {
 
   const logout = async () => {
     try {
-      await axios.post("http://localhost:3001/auth/logout", {}, { withCredentials: true });
+      await axios.post("http://localhost:4000/auth/logout", {}, { withCredentials: true });
     } catch (e) {
       console.error("Logout failed", e);
     }

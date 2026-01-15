@@ -2,6 +2,7 @@ const prisma = require("../prisma/client");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const mailer = require('../utils/mailer');
+const { normalizeCustomerName, defaultLogoUrlForCustomer } = require("../utils/customerName");
 
 const COOKIE_NAME = "sid";
 
@@ -50,14 +51,17 @@ exports.login = async (req, res) => {
       if (user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
     }
 
-    // create session token
+    // create session token with idle timeout semantics
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const idleMs = process.env.SESSION_IDLE_MS
+      ? Number(process.env.SESSION_IDLE_MS)
+      : 15 * 60 * 1000; // default: 15 minutes idle timeout
+    const expiresAt = new Date(Date.now() + idleMs);
     await prisma.session.create({ data: { token, userId: user.id, expiresAt } });
 
     const maxAge = process.env.SESSION_MAX_AGE
       ? Number(process.env.SESSION_MAX_AGE)
-      : 2 * 60 * 1000; // default: 2 minutes for strict sessions in dev
+      : idleMs; // align cookie with idle timeout
     const sameSite = process.env.COOKIE_SAME_SITE || "lax";
     const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
 
@@ -90,13 +94,63 @@ exports.logout = async (req, res) => {
   }
 };
 
+// List all customers with their canonical customerName and logoUrl
+exports.listCustomers = async (req, res) => {
+  try {
+    const customers = await prisma.customer.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        customerName: true,
+        logoUrl: true,
+      },
+      orderBy: { customerName: "asc" },
+    });
+
+    res.json(customers);
+  } catch (err) {
+    console.error("/auth/customers failed:", err);
+    res.status(500).json({ error: "Failed to load customers" });
+  }
+};
+
 exports.me = async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not authenticated" });
-  const { id, email, role, disabled, name } = req.user;
-  res.json({ id, email, role, disabled, name });
+
+  try {
+    const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      include: { customer: true, employee: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const customerName =
+      (user.customer && user.customer.customerName) ||
+      user.customerName ||
+      null;
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        disabled: user.disabled,
+        name: user.name,
+        signupType: user.signupType,
+        customerName,
+        logoUrl: user.customer ? user.customer.logoUrl : null,
+      });
+  } catch (err) {
+    console.error("/auth/me failed:", err);
+    res.status(500).json({ error: "Failed to load current user" });
+  }
 };
 
 // Public: check signup status by email (approved / declined / pending / not_found)
+// Also indicates whether this user is still required to set an initial password.
 exports.signupStatus = async (req, res) => {
   try {
     const email = (req.query.email || "").toString().trim();
@@ -111,7 +165,9 @@ exports.signupStatus = async (req, res) => {
     if (user.declined) return res.json({ status: "declined" });
     if (!user.approved) return res.json({ status: "pending" });
 
-    return res.json({ status: "approved" });
+    // For approved users, expose whether they are still in "first time password" state
+    const mustSetPassword = !!user.mustSetPassword || !user.password;
+    return res.json({ status: "approved", mustSetPassword });
   } catch (err) {
     console.error("signupStatus failed:", err);
     res.status(500).json({ error: "Failed to check status" });
@@ -122,6 +178,8 @@ exports.createUser = async (req, res) => {
   try {
     const { email, name, signupType, customerName, phone, country, place } = req.body;
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCustomerName = normalizeCustomerName(customerName || null);
+    const logoUrl = defaultLogoUrlForCustomer(normalizedCustomerName);
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) return res.status(400).json({ error: "User exists" });
     // create user without password; mustSetPassword true
@@ -134,7 +192,7 @@ exports.createUser = async (req, res) => {
     if (signupType === 'employee') {
       await prisma.employee.create({ data: { userId: user.id, name, email: normalizedEmail, phone: phone || null, country: country || null, place: place || null } });
     } else if (signupType === 'customer') {
-      await prisma.customer.create({ data: { userId: user.id, name, email: normalizedEmail, customerName: customerName || null, phone: phone || null, country: country || null, place: place || null } });
+      await prisma.customer.create({ data: { userId: user.id, name, email: normalizedEmail, customerName: normalizedCustomerName, logoUrl, phone: phone || null, country: country || null, place: place || null } });
     }
     // attempt to send reset token to user (SMTP or console fallback)
     try {
@@ -160,6 +218,8 @@ exports.signup = async (req, res) => {
   try {
     const { email, name, signupType, customerName, phone, country, place } = req.body;
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCustomerName = normalizeCustomerName(customerName || null);
+    const logoUrl = defaultLogoUrlForCustomer(normalizedCustomerName);
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) return res.status(400).json({ error: "User exists" });
 
@@ -179,7 +239,7 @@ exports.signup = async (req, res) => {
     if (signupType === 'employee') {
       await prisma.employee.create({ data: { userId: user.id, name, email: normalizedEmail, phone: phone || null, country: country || null, place: place || null } });
     } else if (signupType === 'customer') {
-      await prisma.customer.create({ data: { userId: user.id, name, email: normalizedEmail, customerName: customerName || null, phone: phone || null, country: country || null, place: place || null } });
+      await prisma.customer.create({ data: { userId: user.id, name, email: normalizedEmail, customerName: normalizedCustomerName, logoUrl, phone: phone || null, country: country || null, place: place || null } });
     }
 
     res.status(201).json({ id: user.id, email: user.email, message: 'Submitted for approval' });
@@ -377,6 +437,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+// First-time password set via token (from approval email)
 exports.setPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -391,11 +452,61 @@ exports.setPassword = async (req, res) => {
       return res.status(400).json({ error: "Your signup is not yet approved" });
     }
     const hash = await bcrypt.hash(password, 10);
-    await prisma.user.update({ where: { id: user.id }, data: { password: hash, mustSetPassword: false, resetToken: null, resetTokenExpires: null } });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hash,
+        mustSetPassword: false,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to set password" });
+  }
+};
+
+// Subsequent password change: requires current password instead of token.
+// This is intended for already-approved users who have set a password before.
+exports.changePassword = async (req, res) => {
+  try {
+    const { email, oldPassword, newPassword } = req.body;
+    const normalizedEmail = (email || "").toString().trim().toLowerCase();
+    if (!normalizedEmail || !oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Email, old password and new password are required" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user || !user.password) {
+      return res.status(400).json({ error: "Account not found or password not set" });
+    }
+    if (user.declined) {
+      return res.status(400).json({ error: "Your signup request has been declined" });
+    }
+    if (!user.approved) {
+      return res.status(400).json({ error: "Your signup is not yet approved" });
+    }
+
+    const ok = await bcrypt.compare(oldPassword, user.password);
+    if (!ok) {
+      return res.status(400).json({ error: "Old password is incorrect" });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hash,
+        mustSetPassword: false,
+      },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("changePassword failed:", err);
+    res.status(500).json({ error: "Failed to change password" });
   }
 };
 

@@ -1,17 +1,44 @@
-import customerLogo from "../assets/customer-logo.png";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Header() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLanding = location.pathname === "/employee-home";
+  
+  // Determine current customer from query string for dynamic logo
+  const searchParams = new URLSearchParams(location.search);
+  const customerNameFromQuery = searchParams.get("customerName");
+
+  const customerLogos = {
+    Infinite: "/client-logos/Infinite.png",
+    VIP: "/client-logos/VIP.png",
+    Routeware: "/client-logos/Routeware.png",
+    Nasuni: "/client-logos/Nasuni.png",
+    Acumatica: "/client-logos/Acumatica.png",
+    Alkami: "/client-logos/Alkami.png",
+    Comply: "/client-logos/Comply.png",
+  };
+
+  // For employees/admins, use customerName from the URL.
+  // For customers, always use the customerName tied to their account.
+  const effectiveCustomerName =
+    user && user.role === "customer"
+      ? user.customerName || null
+      : customerNameFromQuery || null;
+
+  const currentCustomerLogo =
+    effectiveCustomerName && customerLogos[effectiveCustomerName]
+      ? customerLogos[effectiveCustomerName]
+      : null;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", { withCredentials: true });
+        const res = await axios.get("http://localhost:4000/auth/me", { withCredentials: true });
         if (mounted) setUser(res.data);
       } catch (e) {
         if (mounted) setUser(null);
@@ -22,7 +49,7 @@ export default function Header() {
 
   const logout = async () => {
     try {
-      await axios.post("http://localhost:3001/auth/logout", {}, { withCredentials: true });
+      await axios.post("http://localhost:4000/auth/logout", {}, { withCredentials: true });
     } catch (e) {
       console.error("Logout failed", e);
     }
@@ -68,8 +95,8 @@ export default function Header() {
           <div className="text-gray-500">&nbsp;</div>
         )}
 
-        {/* Go back to Home (customer selection) for employees/admins */}
-        {user && (user.role === "employee" || user.role === "admin") && (
+        {/* Go back to Home (customer selection) for employees/admins, but hide on landing */}
+        {user && (user.role === "employee" || user.role === "admin") && !isLanding && (
           <button
             type="button"
             onClick={() => navigate("/employee-home")}
@@ -78,11 +105,17 @@ export default function Header() {
             Go back to Home
           </button>
         )}
+        {/* Dynamic customer logo on non-landing pages */}
+        {!isLanding && currentCustomerLogo && (
+          <div className="flex items-center pr-2 border-l border-gray-200 pl-4">
+            <img
+              src={currentCustomerLogo}
+              alt={effectiveCustomerName || "Customer Logo"}
+              style={{ height: "28px", objectFit: "contain", opacity: 0.95 }}
+            />
+          </div>
+        )}
 
-        {/* LOGO (further right) */}
-        <div className="flex items-center pr-2 border-l border-gray-200 pl-4">
-          <img src={customerLogo} alt="Customer Logo" style={{ height: "28px", objectFit: "contain", opacity: 0.95 }} />
-        </div>
       </div>
     </div>
   );

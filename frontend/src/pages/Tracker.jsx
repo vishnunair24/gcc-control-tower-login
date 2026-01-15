@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import ExcelReplaceUpload from "../components/ExcelReplaceUpload";
 import * as XLSX from "xlsx";
@@ -36,6 +36,8 @@ const createEmptyNewRow = () => ({
 
 export default function Tracker() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search || "";
 
   const [searchParams] = useSearchParams();
   const customerName = searchParams.get("customerName") || "";
@@ -57,28 +59,38 @@ export default function Tracker() {
   const [excelMessage, setExcelMessage] = useState("");
   const [newRows, setNewRows] = useState([]);
 
-  // Redirect customers away from this page; they see only Dashboard
+  // Enforce role-based access and customer scoping
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", {
+        const res = await axios.get("http://localhost:4000/auth/me", {
           withCredentials: true,
         });
-        if (res.data?.role === "customer") {
+        const role = res.data?.role;
+
+        // Customers see only Dashboard
+        if (role === "customer") {
           navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Employees/Admins must have a selected customer; otherwise
+        // send them back to the landing page.
+        if ((role === "employee" || role === "admin") && !customerName) {
+          navigate("/employee-home", { replace: true });
         }
       } catch {
         // If not authenticated, send to login
         window.location.href = "/login.html";
       }
     })();
-  }, [navigate]);
+  }, [navigate, customerName]);
 
   // =========================
   // Load data
   // =========================
   const loadTasks = async () => {
-    const res = await axios.get("http://localhost:3001/tasks", {
+    const res = await axios.get("http://localhost:4000/tasks", {
       params: customerName ? { customerName } : {},
     });
     setTasks(res.data || []);
@@ -147,7 +159,7 @@ export default function Tracker() {
 
   const saveEdit = async () => {
     await axios.put(
-      `http://localhost:3001/tasks/${editRowId}`,
+      `http://localhost:4000/tasks/${editRowId}`,
       editData
     );
     setEditRowId(null);
@@ -187,7 +199,7 @@ export default function Tracker() {
       payload.customerName = customerName;
     }
 
-    await axios.post("http://localhost:3001/tasks", payload);
+    await axios.post("http://localhost:4000/tasks", payload);
     setNewRows((prev) => prev.filter((r) => r._tempId !== row._tempId));
     loadTasks();
   };
@@ -199,7 +211,7 @@ export default function Tracker() {
       if (customerName) {
         payload.customerName = customerName;
       }
-      await axios.post("http://localhost:3001/tasks", payload);
+      await axios.post("http://localhost:4000/tasks", payload);
     }
     setNewRows([]);
     loadTasks();
@@ -249,10 +261,10 @@ export default function Tracker() {
           <ExcelReplaceUpload
             endpoint={
               customerName
-                ? `http://localhost:3001/excel/replace?customerName=${encodeURIComponent(
+                ? `http://localhost:4000/excel/replace?customerName=${encodeURIComponent(
                     customerName
                   )}`
-                : "http://localhost:3001/excel/replace"
+                : "http://localhost:4000/excel/replace"
             }
             confirmText="This will completely replace ALL Program Tracker data. Continue?"
             onSuccess={loadTasks}
@@ -272,7 +284,7 @@ export default function Tracker() {
 
         <button
           className="btn-primary btn-xs"
-          onClick={() => navigate("/infra-tracker")}
+          onClick={() => navigate({ pathname: "/infra-tracker", search })}
         >
           Click to view Infra Setup Tracker
         </button>

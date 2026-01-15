@@ -1,3 +1,93 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Animated mountain background for Employee Landing page */
+.employee-landing-page {
+	position: relative;
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1.5rem;
+	background: linear-gradient(to top, #e0f2fe 0%, #93c5fd 35%, #bfdbfe 65%, #f9fafb 100%);
+	overflow: hidden;
+}
+
+.employee-landing-mountains {
+	position: absolute;
+	left: -10%;
+	right: -10%;
+	bottom: 0;
+	height: 55vh;
+	pointer-events: none;
+	z-index: 0;
+}
+
+.employee-mountain-layer {
+	position: absolute;
+	bottom: 0;
+	width: 200%;
+	height: 100%;
+	background-repeat: no-repeat;
+	background-size: cover;
+	transform-origin: bottom left;
+}
+
+.employee-mountain-layer.back {
+	background: linear-gradient(135deg, #1f2937 0%, #0f172a 60%);
+	clip-path: polygon(0 65%, 15% 50%, 35% 60%, 55% 40%, 70% 55%, 85% 45%, 100% 55%, 100% 100%, 0 100%);
+	opacity: 0.5;
+	animation: mountain-drift-slow 45s linear infinite;
+}
+
+.employee-mountain-layer.mid {
+	background: linear-gradient(135deg, #111827 0%, #1f2937 60%);
+	clip-path: polygon(0 75%, 12% 55%, 30% 70%, 48% 48%, 65% 65%, 82% 50%, 100% 62%, 100% 100%, 0 100%);
+	opacity: 0.7;
+	animation: mountain-drift-mid 35s linear infinite;
+}
+
+.employee-mountain-layer.front {
+	background: linear-gradient(135deg, #020617 0%, #0f172a 60%);
+	clip-path: polygon(0 82%, 10% 65%, 28% 78%, 45% 58%, 62% 75%, 80% 60%, 100% 72%, 100% 100%, 0 100%);
+	opacity: 0.9;
+	animation: mountain-drift-fast 25s linear infinite;
+}
+
+@keyframes mountain-drift-slow {
+	0% {
+		transform: translateX(0);
+	}
+	50% {
+		transform: translateX(-70px);
+	}
+	100% {
+		transform: translateX(0);
+	}
+}
+
+@keyframes mountain-drift-mid {
+	0% {
+		transform: translateX(0);
+	}
+	50% {
+		transform: translateX(-120px);
+	}
+	100% {
+		transform: translateX(0);
+	}
+}
+
+@keyframes mountain-drift-fast {
+	0% {
+		transform: translateX(0);
+	}
+	50% {
+		transform: translateX(-170px);
+	}
+	100% {
+		transform: translateX(0);
+	}
+}

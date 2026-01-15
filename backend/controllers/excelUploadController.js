@@ -1,5 +1,6 @@
 const XLSX = require("xlsx");
 const prisma = require("../prisma/client");
+const { normalizeCustomerName } = require("../utils/customerName");
 
 /**
  * Normalize header names
@@ -35,6 +36,7 @@ exports.replaceFromExcel = async (req, res) => {
   try {
     // Optional customer passed via query/body (e.g., from UI context)
     let batchCustomerName = (req.query.customerName || req.body?.customerName || "").toString().trim();
+    batchCustomerName = normalizeCustomerName(batchCustomerName || null);
 
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
@@ -106,7 +108,7 @@ exports.replaceFromExcel = async (req, res) => {
     if (!batchCustomerName) {
       const names = Array.from(customerNamesInSheet).filter(Boolean);
       if (names.length === 1) {
-        batchCustomerName = names[0];
+        batchCustomerName = normalizeCustomerName(names[0]);
       } else if (names.length > 1) {
         return res.status(400).json({
           error:
@@ -115,7 +117,7 @@ exports.replaceFromExcel = async (req, res) => {
       }
     }
 
-    const finalCustomerName = batchCustomerName || null;
+    const finalCustomerName = normalizeCustomerName(batchCustomerName || null);
 
     const tasksWithCustomer = tasks.map((t) => ({
       ...t,

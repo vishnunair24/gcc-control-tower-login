@@ -32,7 +32,8 @@ router.get('/pending-public', auth.listPendingPublic);
 router.post('/approve-public/:id', auth.approveSignupPublic);
 router.post('/decline-public/:id', auth.declineSignupPublic);
 
-// Password set via token
+// Password set via token (first time) and subsequent change via old password
 router.post("/set-password", auth.setPassword);
+router.post("/change-password", auth.changePassword);
 
 module.exports = router;

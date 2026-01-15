@@ -12,7 +12,7 @@ function Sidebar() {
     let mounted = true;
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", {
+        const res = await axios.get("http://localhost:4000/auth/me", {
           withCredentials: true,
         });
         if (mounted) setUser(res.data);

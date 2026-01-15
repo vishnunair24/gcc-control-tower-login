@@ -16,7 +16,7 @@
 
         async function check() {
           try {
-            const res = await fetch("http://localhost:3001/auth/me", { credentials: "include" });
+            const res = await fetch("http://localhost:4000/auth/me", { credentials: "include" });
             if (!res.ok) {
               window.location.href = "/login.html";
             }

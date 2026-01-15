@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config";
 import { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import {
@@ -45,8 +45,12 @@ const daysFromToday = (d) => {
 };
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const customerName = searchParams.get("customerName") || "";
+  const urlCustomerName = searchParams.get("customerName") || "";
+
+  const [customerName, setCustomerName] = useState(urlCustomerName);
+  const [userRole, setUserRole] = useState(null);
 
   const [tasks, setTasks] = useState([]);
   const [activeSignal, setActiveSignal] = useState(null);
@@ -59,15 +63,48 @@ function Dashboard() {
     status: "",
   });
 
+  // Load current user; for customers, lock dashboard to their own customerName.
+  // For employees/admins, require a customerName in the URL.
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/auth/me", {
+          withCredentials: true,
+        });
+        const role = res.data?.role;
+        setUserRole(role || null);
+
+        if (role === "customer") {
+          // Always use backend-provided customerName for customers.
+          if (res.data.customerName) {
+            setCustomerName(res.data.customerName);
+          }
+          return;
+        }
+
+        if ((role === "employee" || role === "admin") && !urlCustomerName) {
+          navigate("/employee-home", { replace: true });
+        }
+      } catch {
+        window.location.href = "/login.html";
+      }
+    })();
+  }, [navigate, urlCustomerName]);
+
+  useEffect(() => {
+    // Wait until we know role; for customers, also wait until we have their customerName.
+    if (!userRole) return;
+    if (userRole === "customer" && !customerName) return;
+
     fetchTasks();
-  }, [customerName]);
+  }, [customerName, userRole]);
 
   const fetchTasks = async () => {
-    const res = await axios.get("http://localhost:3001/tasks", {
-      params: customerName ? { customerName } : {},
+    const params = customerName ? { customerName } : {};
+    const res = await axios.get("http://localhost:4000/tasks", {
+      params,
     });
-    setTasks(res.data);
+    setTasks(res.data || []);
   };
 
   // ================= KPIs =================

@@ -138,6 +138,8 @@ model Customer {
   name         String?
   email        String?
   customerName String?
+  // Optional logo URL or path (e.g., /client-logos/Infinite.png)
+  logoUrl      String?
   phone        String?
   country      String?
   place        String?

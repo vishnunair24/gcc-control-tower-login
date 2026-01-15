@@ -31,6 +31,7 @@ export default function InfraTracker() {
 
   const [searchParams] = useSearchParams();
   const customerName = searchParams.get("customerName") || "";
+  const search = searchParams.toString();
 
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
@@ -52,27 +53,36 @@ export default function InfraTracker() {
   ========================= */
   const [newRows, setNewRows] = useState([]);
 
-  // Customers should not access the Infra tracker directly
+  // Enforce role-based access and customer scoping
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", {
+        const res = await axios.get("http://localhost:4000/auth/me", {
           withCredentials: true,
         });
-        if (res.data?.role === "customer") {
+        const role = res.data?.role;
+
+        // Customers should not access the Infra tracker directly
+        if (role === "customer") {
           navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Employees/Admins must have a selected customer
+        if ((role === "employee" || role === "admin") && !customerName) {
+          navigate("/employee-home", { replace: true });
         }
       } catch {
         window.location.href = "/login.html";
       }
     })();
-  }, [navigate]);
+  }, [navigate, customerName]);
 
   // =========================
   // Load Infra Tasks
   // =========================
   const loadTasks = async () => {
-    const res = await axios.get("http://localhost:3001/infra-tasks", {
+    const res = await axios.get("http://localhost:4000/infra-tasks", {
       params: customerName ? { customerName } : {},
     });
     setTasks(res.data || []);
@@ -136,7 +146,7 @@ export default function InfraTracker() {
 
   const saveEdit = async () => {
     await axios.put(
-      `http://localhost:3001/infra-tasks/${editRowId}`,
+      `http://localhost:4000/infra-tasks/${editRowId}`,
       editData
     );
     setEditRowId(null);
@@ -176,7 +186,7 @@ export default function InfraTracker() {
       payload.customerName = customerName;
     }
 
-    await axios.post("http://localhost:3001/infra-tasks", payload);
+    await axios.post("http://localhost:4000/infra-tasks", payload);
 
     setNewRows((prev) => prev.filter((r) => r._tempId !== row._tempId));
     loadTasks();
@@ -189,7 +199,7 @@ export default function InfraTracker() {
       if (customerName) {
         payload.customerName = customerName;
       }
-      await axios.post("http://localhost:3001/infra-tasks", payload);
+      await axios.post("http://localhost:4000/infra-tasks", payload);
     }
     setNewRows([]);
     loadTasks();
@@ -250,10 +260,10 @@ export default function InfraTracker() {
           <ExcelReplaceUpload
             endpoint={
               customerName
-                ? `http://localhost:3001/excel/infra-replace?customerName=${encodeURIComponent(
+                ? `http://localhost:4000/excel/infra-replace?customerName=${encodeURIComponent(
                     customerName
                   )}`
-                : "http://localhost:3001/excel/infra-replace"
+                : "http://localhost:4000/excel/infra-replace"
             }
             confirmText="This will completely replace ALL Infra Setup data. Continue?"
             onSuccess={() => {
@@ -282,7 +292,12 @@ export default function InfraTracker() {
         {/* RIGHT SIDE */}
         <button
           className="btn-outline btn-xs"
-          onClick={() => navigate("/tracker")}
+          onClick={() =>
+            navigate({
+              pathname: "/tracker",
+              search: search ? `?${search}` : "",
+            })
+          }
         >
           ← Back to Program Tracker
         </button>

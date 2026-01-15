@@ -1,13 +1,34 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { createAudit } = require("../utils/audit");
+const { normalizeCustomerName } = require("../utils/customerName");
 
 /**
  * GET all tasks (optionally filtered by customerName)
  */
 exports.getTasks = async (req, res) => {
   try {
-    const { customerName } = req.query;
+    let { customerName } = req.query;
+
+    // For customer logins, always force data to their own customerName
+    if (req.user && req.user.role === "customer") {
+      try {
+        const cust = await prisma.customer.findUnique({
+          where: { userId: req.user.id },
+        });
+        if (cust && cust.customerName) {
+          customerName = normalizeCustomerName(cust.customerName);
+        }
+      } catch (e) {
+        console.error("Failed to resolve customer for user", e);
+      }
+    }
+
+    // Normalize any query-provided customerName as well
+    if (customerName) {
+      customerName = normalizeCustomerName(customerName);
+    }
+
     const where = customerName ? { customerName } : {};
 
     const tasks = await prisma.task.findMany({
@@ -16,6 +37,7 @@ exports.getTasks = async (req, res) => {
     });
     res.json(tasks);
   } catch (err) {
+    console.error("getTasks failed:", err);
     res.status(500).json({ error: err.message });
   }
 };

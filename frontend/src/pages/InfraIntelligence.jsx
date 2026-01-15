@@ -16,23 +16,33 @@ export default function InfraIntelligence() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerName = searchParams.get("customerName") || "";
+  const search = searchParams.toString();
   const [tasks, setTasks] = useState([]);
 
-  // Customers should not see Infra intelligence; redirect them
+  // Enforce role-based access and customer scoping
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:3001/auth/me", {
+        const res = await axios.get("http://localhost:4000/auth/me", {
           withCredentials: true,
         });
-        if (res.data?.role === "customer") {
+        const role = res.data?.role;
+
+        // Customers should not see Infra intelligence; redirect them
+        if (role === "customer") {
           navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Employees/Admins must have a selected customer
+        if ((role === "employee" || role === "admin") && !customerName) {
+          navigate("/employee-home", { replace: true });
         }
       } catch {
         window.location.href = "/login.html";
       }
     })();
-  }, [navigate]);
+  }, [navigate, customerName]);
 
   // =========================
   // Timeline controls
@@ -60,7 +70,7 @@ export default function InfraIntelligence() {
   // =========================
   useEffect(() => {
     axios
-      .get("http://localhost:3001/infra-tasks", {
+      .get("http://localhost:4000/infra-tasks", {
         params: customerName ? { customerName } : {},
       })
       .then((res) => setTasks(res.data || []));
@@ -229,7 +239,12 @@ export default function InfraIntelligence() {
 
         <button
           className="btn-outline btn-xs"
-          onClick={() => navigate("/program-intelligence")}
+          onClick={() =>
+            navigate({
+              pathname: "/program-intelligence",
+              search: search ? `?${search}` : "",
+            })
+          }
         >
           ← Back to Program Intelligence
         </button>

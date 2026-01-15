@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 
 const taskRoutes = require("./routes/taskRoutes");
 const infraTaskRoutes = require("./routes/infraTaskRoutes");
@@ -13,12 +13,36 @@ const authController = require("./controllers/authController");
 
 const app = express();
 
-// app.use(cors());
-// Allow Vite dev server origin for credentialed requests during development
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+// Robust CORS config: supports multiple origins from env and
+// never sends wildcard "*" when using credentials.
+// Example env: CLIENT_ORIGIN="http://localhost:5173,http://localhost:4173"
+const rawOrigins = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const allowedOrigins = rawOrigins.split(",").map((o) => o.trim()).filter(Boolean);
+
+const corsOptions = { credentials: true };
+
+if (allowedOrigins.includes("*")) {
+  // Reflect request origin instead of sending "*" so that
+  // credentialed requests remain valid even when allowing all origins.
+  corsOptions.origin = true;
+} else {
+  corsOptions.origin = function (origin, callback) {
+    // Allow non-browser / same-origin requests with no Origin header
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(null, false);
+  };
+}
+
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
+
+// Debug header to verify which backend instance is responding
+app.use((req, res, next) => {
+  res.setHeader("X-GCC-Backend", "main-3001");
+  next();
+});
 
 // load session (optional) to populate req.user for downstream routes
 app.use(loadSession);

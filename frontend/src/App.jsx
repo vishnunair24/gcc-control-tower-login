@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
@@ -15,6 +15,53 @@ const HEADER_HEIGHT = 56; // single frozen header height
 const HEADER_BG_COLOR = "#ffffff";
 
 function App() {
+  const location = useLocation();
+  const isLanding = location.pathname === "/employee-home";
+
+  // For the employee/admin landing page, show the same header
+  // (user avatar, role, logout, logo) but without the sidebar.
+  if (isLanding) {
+    return (
+      <div>
+        {/* Fixed Header without sidebar offset */}
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            left: 0,
+            height: HEADER_HEIGHT,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 20px",
+            background: HEADER_BG_COLOR,
+            borderBottom: "1px solid #e5e7eb",
+            zIndex: 50,
+          }}
+        >
+          <Header />
+          <img
+            src={summitLogo}
+            alt="Summit Consulting"
+            style={{
+              height: "40px",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
+        {/* Landing content below header */}
+        <main
+          className="bg-gray-100 min-h-screen"
+          style={{ marginTop: HEADER_HEIGHT }}
+        >
+          <EmployeeLanding />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Fixed Sidebar */}

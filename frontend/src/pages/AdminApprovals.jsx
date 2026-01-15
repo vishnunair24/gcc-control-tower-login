@@ -9,7 +9,7 @@ export default function AdminApprovals() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:3001/auth/pending", {
+      const res = await fetch("http://localhost:4000/auth/pending", {
         credentials: "include",
       });
       if (!res.ok) {
@@ -36,7 +36,7 @@ export default function AdminApprovals() {
   async function approve(id) {
     if (!window.confirm("Approve this signup and send reset token?")) return;
     try {
-      const res = await fetch(`http://localhost:3001/auth/approve/${id}`, {
+      const res = await fetch(`http://localhost:4000/auth/approve/${id}`, {
         method: "POST",
         credentials: "include",
       });
@@ -59,7 +59,7 @@ export default function AdminApprovals() {
   async function decline(id) {
     if (!window.confirm("Decline this signup?")) return;
     try {
-      const res = await fetch(`http://localhost:3001/auth/decline/${id}`, {
+      const res = await fetch(`http://localhost:4000/auth/decline/${id}`, {
         method: "POST",
         credentials: "include",
       });
