@@ -55,6 +55,10 @@
   </div>
 
   <script>
+    const API_BASE_URL =
+      window.location.hostname === 'localhost'
+        ? 'http://localhost:4000'
+        : 'https://gcc-control-tower.onrender.com';
     const signupType = document.getElementById('signupType');
     const customerWrap = document.getElementById('customerNameWrap');
     signupType.addEventListener('change', ()=>{
@@ -79,7 +83,7 @@
         place: document.getElementById('place').value.trim(),
       };
       try{
-        const res = await fetch('http://localhost:4000/auth/signup',{
+        const res = await fetch(API_BASE_URL + '/auth/signup',{
           method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
         });
         const data = await res.json().catch(()=>({}));

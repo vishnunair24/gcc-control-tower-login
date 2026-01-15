@@ -46,11 +46,15 @@
   </div>
 
   <script>
+    const API_BASE_URL =
+      window.location.hostname === 'localhost'
+        ? 'http://localhost:4000'
+        : 'https://gcc-control-tower.onrender.com';
     async function loadPending(){
       const msg = document.getElementById('msg');
       msg.textContent = 'Loading...';
       try{
-        const res = await fetch('http://localhost:4000/auth/pending', { credentials: 'include' });
+        const res = await fetch(API_BASE_URL + '/auth/pending', { credentials: 'include' });
         if (!res.ok) {
           const d = await res.json().catch(()=>({}));
           // Show login area if unauthorized
@@ -97,7 +101,7 @@
         const id = e.target.getAttribute('data-id');
         e.target.disabled = true; e.target.textContent = 'Approving...';
         try{
-          const res = await fetch('http://localhost:4000/auth/approve/' + id, { method: 'POST', credentials: 'include' });
+          const res = await fetch(API_BASE_URL + '/auth/approve/' + id, { method: 'POST', credentials: 'include' });
           const data = await res.json().catch(()=>({}));
           if (!res.ok) {
             alert(data.error || 'Failed to approve');
@@ -119,7 +123,7 @@
       const loginMsg = document.getElementById('loginMsg');
       loginMsg.textContent = 'Signing in...';
       try{
-        const res = await fetch('http://localhost:4000/auth/login', {
+        const res = await fetch(API_BASE_URL + '/auth/login', {
           method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include',
           body: JSON.stringify({ email, password, loginAs: 'admin' })
         });

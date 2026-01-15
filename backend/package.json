@@ -1,6 +1,9 @@
 {
   "scripts": {
-    "db:seed": "node prisma/seed.js"
+    "db:seed": "node prisma/seed.js",
+    "start": "node server.js",
+    "migrate:deploy": "prisma migrate deploy",
+    "render:start": "npm run migrate:deploy && node server.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -16,7 +16,12 @@
 
         async function check() {
           try {
-            const res = await fetch("http://localhost:4000/auth/me", { credentials: "include" });
+            const API_BASE_URL =
+              window.location.hostname === "localhost"
+                ? "http://localhost:4000"
+                : "https://gcc-control-tower.onrender.com";
+
+            const res = await fetch(API_BASE_URL + "/auth/me", { credentials: "include" });
             if (!res.ok) {
               window.location.href = "/login.html";
             }

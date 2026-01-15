@@ -68,7 +68,7 @@ function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, {
           withCredentials: true,
         });
         const role = res.data?.role;
@@ -101,7 +101,7 @@ function Dashboard() {
 
   const fetchTasks = async () => {
     const params = customerName ? { customerName } : {};
-    const res = await axios.get("http://localhost:4000/tasks", {
+    const res = await axios.get(`${API_BASE_URL}/tasks`, {
       params,
     });
     setTasks(res.data || []);

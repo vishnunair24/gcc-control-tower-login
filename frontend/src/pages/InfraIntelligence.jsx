@@ -23,7 +23,7 @@ export default function InfraIntelligence() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, {
           withCredentials: true,
         });
         const role = res.data?.role;
@@ -70,7 +70,7 @@ export default function InfraIntelligence() {
   // =========================
   useEffect(() => {
     axios
-      .get("http://localhost:4000/infra-tasks", {
+      .get(`${API_BASE_URL}/infra-tasks`, {
         params: customerName ? { customerName } : {},
       })
       .then((res) => setTasks(res.data || []));

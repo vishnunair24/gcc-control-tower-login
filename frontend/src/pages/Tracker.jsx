@@ -63,7 +63,7 @@ export default function Tracker() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, {
           withCredentials: true,
         });
         const role = res.data?.role;
@@ -90,7 +90,7 @@ export default function Tracker() {
   // Load data
   // =========================
   const loadTasks = async () => {
-    const res = await axios.get("http://localhost:4000/tasks", {
+    const res = await axios.get(`${API_BASE_URL}/tasks`, {
       params: customerName ? { customerName } : {},
     });
     setTasks(res.data || []);
@@ -159,7 +159,7 @@ export default function Tracker() {
 
   const saveEdit = async () => {
     await axios.put(
-      `http://localhost:4000/tasks/${editRowId}`,
+      `${API_BASE_URL}/tasks/${editRowId}`,
       editData
     );
     setEditRowId(null);
@@ -199,7 +199,7 @@ export default function Tracker() {
       payload.customerName = customerName;
     }
 
-    await axios.post("http://localhost:4000/tasks", payload);
+    await axios.post(`${API_BASE_URL}/tasks`, payload);
     setNewRows((prev) => prev.filter((r) => r._tempId !== row._tempId));
     loadTasks();
   };
@@ -211,7 +211,7 @@ export default function Tracker() {
       if (customerName) {
         payload.customerName = customerName;
       }
-      await axios.post("http://localhost:4000/tasks", payload);
+      await axios.post(`${API_BASE_URL}/tasks`, payload);
     }
     setNewRows([]);
     loadTasks();
@@ -261,10 +261,10 @@ export default function Tracker() {
           <ExcelReplaceUpload
             endpoint={
               customerName
-                ? `http://localhost:4000/excel/replace?customerName=${encodeURIComponent(
+                ? `${API_BASE_URL}/excel/replace?customerName=${encodeURIComponent(
                     customerName
                   )}`
-                : "http://localhost:4000/excel/replace"
+                : `${API_BASE_URL}/excel/replace`
             }
             confirmText="This will completely replace ALL Program Tracker data. Continue?"
             onSuccess={loadTasks}

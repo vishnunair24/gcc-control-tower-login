@@ -29,7 +29,7 @@ export default function ProgramIntelligence() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, {
           withCredentials: true,
         });
         const role = res.data?.role;
@@ -70,7 +70,7 @@ export default function ProgramIntelligence() {
   // ================= LOAD DATA =================
   useEffect(() => {
     axios
-      .get("http://localhost:4000/tasks", {
+      .get(`${API_BASE_URL}/tasks`, {
         params: customerName ? { customerName } : {},
       })
       .then((res) => {

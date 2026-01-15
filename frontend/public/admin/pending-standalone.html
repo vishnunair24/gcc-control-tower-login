@@ -40,6 +40,10 @@
   </div>
 
   <script>
+    const API_BASE_URL =
+      window.location.hostname === 'localhost'
+        ? 'http://localhost:4000'
+        : 'https://gcc-control-tower.onrender.com';
     const msg = document.getElementById('msg');
     const keyInput = document.getElementById('adminkey');
     const params = new URLSearchParams(window.location.search);
@@ -50,7 +54,7 @@
       if (!k) { msg.textContent = 'Enter admin key'; return; }
       msg.textContent = 'Loading...';
       try{
-        const res = await fetch('http://localhost:4000/auth/pending-public?key=' + encodeURIComponent(k));
+        const res = await fetch(API_BASE_URL + '/auth/pending-public?key=' + encodeURIComponent(k));
         if (!res.ok){ const d = await res.json().catch(()=>({})); msg.textContent = d.error || 'Failed to load'; return; }
         const list = await res.json();
         const tbody = document.querySelector('#tbl tbody');
@@ -85,7 +89,7 @@
         if (!k) { alert('Enter admin key'); return; }
         e.target.disabled = true; e.target.textContent = 'Approving...';
         try{
-          const res = await fetch('http://localhost:4000/auth/approve-public/' + id + '?key=' + encodeURIComponent(k), { method: 'POST' });
+          const res = await fetch(API_BASE_URL + '/auth/approve-public/' + id + '?key=' + encodeURIComponent(k), { method: 'POST' });
           const data = await res.json().catch(()=>({}));
           if (!res.ok){ alert(data.error || 'Failed to approve'); e.target.disabled = false; e.target.textContent = 'Approve'; return; }
           alert('Approved. Reset token:\n' + (data.resetToken || 'N/A') + '\n\nToken also emailed/logged on server.');

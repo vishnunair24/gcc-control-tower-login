@@ -57,7 +57,7 @@ export default function InfraTracker() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, {
           withCredentials: true,
         });
         const role = res.data?.role;
@@ -82,7 +82,7 @@ export default function InfraTracker() {
   // Load Infra Tasks
   // =========================
   const loadTasks = async () => {
-    const res = await axios.get("http://localhost:4000/infra-tasks", {
+    const res = await axios.get(`${API_BASE_URL}/infra-tasks`, {
       params: customerName ? { customerName } : {},
     });
     setTasks(res.data || []);
@@ -146,7 +146,7 @@ export default function InfraTracker() {
 
   const saveEdit = async () => {
     await axios.put(
-      `http://localhost:4000/infra-tasks/${editRowId}`,
+      `${API_BASE_URL}/infra-tasks/${editRowId}`,
       editData
     );
     setEditRowId(null);
@@ -186,7 +186,7 @@ export default function InfraTracker() {
       payload.customerName = customerName;
     }
 
-    await axios.post("http://localhost:4000/infra-tasks", payload);
+    await axios.post(`${API_BASE_URL}/infra-tasks`, payload);
 
     setNewRows((prev) => prev.filter((r) => r._tempId !== row._tempId));
     loadTasks();
@@ -199,7 +199,7 @@ export default function InfraTracker() {
       if (customerName) {
         payload.customerName = customerName;
       }
-      await axios.post("http://localhost:4000/infra-tasks", payload);
+      await axios.post(`${API_BASE_URL}/infra-tasks`, payload);
     }
     setNewRows([]);
     loadTasks();
@@ -260,10 +260,10 @@ export default function InfraTracker() {
           <ExcelReplaceUpload
             endpoint={
               customerName
-                ? `http://localhost:4000/excel/infra-replace?customerName=${encodeURIComponent(
+                ? `${API_BASE_URL}/excel/infra-replace?customerName=${encodeURIComponent(
                     customerName
                   )}`
-                : "http://localhost:4000/excel/infra-replace"
+                : `${API_BASE_URL}/excel/infra-replace`
             }
             confirmText="This will completely replace ALL Infra Setup data. Continue?"
             onSuccess={() => {

@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 
 function Layout() {
   const location = useLocation();
@@ -17,7 +18,7 @@ function Layout() {
     let mounted = true;
     (async () => {
       try {
-        const res = await axios.get("http://localhost:4000/auth/me", { withCredentials: true });
+        const res = await axios.get(`${API_BASE_URL}/auth/me`, { withCredentials: true });
         if (mounted) setUser(res.data);
       } catch (e) {
         if (mounted) setUser(null);
@@ -28,7 +29,7 @@ function Layout() {
 
   const logout = async () => {
     try {
-      await axios.post("http://localhost:4000/auth/logout", {}, { withCredentials: true });
+      await axios.post(`${API_BASE_URL}/auth/logout`, {}, { withCredentials: true });
     } catch (e) {
       console.error("Logout failed", e);
     }
