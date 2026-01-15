@@ -9,25 +9,30 @@ exports.loadSession = async (req, res, next) => {
     const session = await prisma.session.findUnique({ where: { token }, include: { user: true } });
     if (!session) return next();
     const now = new Date();
-    if (session.expiresAt < now) {
-      // expired
-      await prisma.session.deleteMany({ where: { token } });
-      return next();
+    const idleRaw = process.env.SESSION_IDLE_MS;
+    const idleMs = idleRaw && Number(idleRaw) > 0 ? Number(idleRaw) : null;
+
+    // Only enforce/slide idle timeout when SESSION_IDLE_MS is a
+    // positive number. If it's disabled (null), sessions never
+    // expire automatically.
+    let effectiveExpiresAt = session.expiresAt;
+    if (idleMs) {
+      if (session.expiresAt < now) {
+        // expired
+        await prisma.session.deleteMany({ where: { token } });
+        return next();
+      }
+
+      const newExpiresAt = new Date(now.getTime() + idleMs);
+      try {
+        await prisma.session.update({ where: { token }, data: { expiresAt: newExpiresAt } });
+        effectiveExpiresAt = newExpiresAt;
+      } catch (e) {
+        console.error("Failed to extend session expiry", e);
+      }
     }
 
-    // Sliding idle timeout: extend expiry on each active request.
-    const idleMs = process.env.SESSION_IDLE_MS
-      ? Number(process.env.SESSION_IDLE_MS)
-      : 15 * 60 * 1000; // default 15 minutes
-    const newExpiresAt = new Date(now.getTime() + idleMs);
-
-    try {
-      await prisma.session.update({ where: { token }, data: { expiresAt: newExpiresAt } });
-    } catch (e) {
-      console.error("Failed to extend session expiry", e);
-    }
-
-    req.session = { ...session, expiresAt: newExpiresAt };
+    req.session = { ...session, expiresAt: effectiveExpiresAt };
     req.user = session.user;
     next();
   } catch (err) {

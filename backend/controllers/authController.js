@@ -51,17 +51,20 @@ exports.login = async (req, res) => {
       if (user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
     }
 
-    // create session token with idle timeout semantics
+    // create session token; idle timeout is optional and can be disabled
     const token = crypto.randomBytes(32).toString("hex");
-    const idleMs = process.env.SESSION_IDLE_MS
-      ? Number(process.env.SESSION_IDLE_MS)
-      : 15 * 60 * 1000; // default: 15 minutes idle timeout
-    const expiresAt = new Date(Date.now() + idleMs);
+    const idleRaw = process.env.SESSION_IDLE_MS;
+    const idleMs = idleRaw && Number(idleRaw) > 0 ? Number(idleRaw) : null;
+    // When idle timeout is disabled (idleMs === null), push expiry far into
+    // the future so that sessions effectively never expire until logout.
+    const expiresAt = idleMs
+      ? new Date(Date.now() + idleMs)
+      : new Date("9999-12-31T23:59:59.999Z");
     await prisma.session.create({ data: { token, userId: user.id, expiresAt } });
 
     const maxAge = process.env.SESSION_MAX_AGE
       ? Number(process.env.SESSION_MAX_AGE)
-      : idleMs; // align cookie with idle timeout
+      : idleMs || 365 * 24 * 60 * 60 * 1000; // default cookie: 1 year
     // In production we default to SameSite=None so that cookies
     // work across separate frontend/backend domains (e.g. Vercel + Render).
     const sameSite = process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "none" : "lax");
