@@ -15,9 +15,11 @@ const authController = require("./controllers/authController");
 const app = express();
 
 // CORS: reflect the incoming Origin and allow credentials.
-// This avoids wildcard "*" and works for dev, Render, and Vercel
-// without needing CLIENT_ORIGIN to be perfectly configured.
-app.use(cors({ origin: true, credentials: true }));
+// Also handle preflight (OPTIONS) explicitly so browsers get
+// proper Access-Control-* headers before POST/GET.
+const corsConfig = { origin: true, credentials: true };
+app.use(cors(corsConfig));
+app.options("*", cors(corsConfig));
 app.use(cookieParser());
 app.use(express.json());
 
