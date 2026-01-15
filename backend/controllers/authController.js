@@ -65,10 +65,16 @@ exports.login = async (req, res) => {
     const maxAge = process.env.SESSION_MAX_AGE
       ? Number(process.env.SESSION_MAX_AGE)
       : idleMs || 365 * 24 * 60 * 60 * 1000; // default cookie: 1 year
-    // In production we default to SameSite=None so that cookies
-    // work across separate frontend/backend domains (e.g. Vercel + Render).
-    const sameSite = process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "none" : "lax");
-    const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+
+    // Default to SameSite=None so that cookies work across
+    // separate frontend/backend domains (e.g. Vercel + Render).
+    // This can be overridden via COOKIE_SAME_SITE if needed.
+    const sameSite = process.env.COOKIE_SAME_SITE || "none";
+    // For SameSite=None the cookie MUST be Secure in browsers.
+    const secure =
+      process.env.COOKIE_SECURE === "true" ||
+      sameSite === "none" ||
+      process.env.NODE_ENV === "production";
 
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
