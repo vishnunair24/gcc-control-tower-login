@@ -14,8 +14,7 @@ const authController = require("./controllers/authController");
 
 const app = express();
 
-// CORS: custom handler + cors helper to guarantee headers
-// are present for both simple and preflight requests.
+// CORS: custom handler for both simple and preflight (OPTIONS) requests.
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
@@ -23,22 +22,16 @@ app.use((req, res, next) => {
     res.header("Vary", "Origin");
     res.header("Access-Control-Allow-Credentials", "true");
   }
-  next();
-});
 
-// Express 5 uses a stricter path-to-regexp implementation that no longer
-// accepts "*" as a valid path pattern, so we use "/*" to match all paths
-// for OPTIONS (CORS preflight) requests.
-app.options("/*", (req, res) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Vary", "Origin");
+  // Handle CORS preflight without using a path pattern (avoids
+  // path-to-regexp issues in Express 5).
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return res.sendStatus(204);
   }
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.sendStatus(204);
+
+  next();
 });
 app.use(cookieParser());
 app.use(express.json());
