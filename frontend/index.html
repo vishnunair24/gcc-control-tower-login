@@ -22,12 +22,18 @@
                 : "https://gcc-control-tower-login.onrender.com";
 
             const res = await fetch(API_BASE_URL + "/auth/me", { credentials: "include" });
-            if (!res.ok) {
+
+            // Only force logout when the server explicitly says the
+            // user is not authenticated or forbidden. Other errors
+            // (like transient 5xx or network glitches) should not
+            // immediately kick the user out.
+            if (res.status === 401 || res.status === 403) {
               window.location.href = "/login.html";
             }
           } catch (e) {
+            // Log the error but do not redirect; this avoids random
+            // logouts when the backend is briefly unavailable.
             console.error("Session check failed:", e);
-            window.location.href = "/login.html";
           }
         }
 
