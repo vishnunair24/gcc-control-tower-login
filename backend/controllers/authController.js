@@ -70,11 +70,29 @@ exports.login = async (req, res) => {
     // separate frontend/backend domains (e.g. Vercel + Render).
     // This can be overridden via COOKIE_SAME_SITE if needed.
     const sameSite = process.env.COOKIE_SAME_SITE || "none";
-    // For SameSite=None the cookie MUST be Secure in browsers.
-    const secure =
-      process.env.COOKIE_SECURE === "true" ||
-      sameSite === "none" ||
-      process.env.NODE_ENV === "production";
+
+    // Determine whether to mark the cookie as Secure.
+    // Priority:
+    //   1) Explicit env override via COOKIE_SECURE ("true" / "false").
+    //   2) Auto-detect HTTPS via req.secure or X-Forwarded-Proto.
+    const envSecure = process.env.COOKIE_SECURE;
+    const isHttps =
+      req.secure ||
+      req.headers["x-forwarded-proto"] === "https";
+
+    let secure;
+    if (envSecure === "true") {
+      secure = true;
+    } else if (envSecure === "false") {
+      secure = false;
+    } else {
+      secure = !!isHttps;
+    }
+
+    // For SameSite=None the cookie SHOULD be Secure in modern browsers.
+    if (sameSite === "none" && !secure) {
+      console.warn("Warning: SameSite=None without Secure; some browsers may reject the cookie.");
+    }
 
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
